@@ -1,0 +1,199 @@
+#Abstract
+-- ************************************************************************************************************
+
+data TFile = TFile TUnit [TChildM]
+  deriving (Show, Eq, Read)
+
+data TUnit = TUnit TRevision TLanguage TFileName  
+  deriving (Show, Eq, Read)
+
+data TRevision = TRevision String
+  deriving (Show, Eq, Read)
+
+data TLanguage = TLanguage String
+  deriving (Show, Eq, Read)
+
+data TFileName = TFileName String
+  deriving (Show, Eq, Read)
+
+data TChild = TChild TKind [TChildM] 
+            | TLiteralChild TLiteralType TLiteralText
+            | TCommentChild TCommentText
+            | TBlockChild [TChildM] 
+            | TSingleKindChild TKind
+  deriving (Show, Eq, Read)
+
+data TChildM = MTChild TChild
+             | MText TText
+  deriving (Show, Eq, Read)
+
+data TText = TText String
+  deriving (Show, Eq, Read)
+
+data TKind = TKind TKindName
+  deriving (Show, Eq, Read)
+
+type TKindName = String
+
+data TLiteralType = TLiteralType TLiteralTypeNa
+  deriving (Show, Eq, Read)
+
+type TLiteralTypeNa = String
+
+data TLiteralText = TLiteralText String
+  deriving (Show, Eq, Read)
+
+data TCommentText = TCommentText String
+  deriving (Show, Eq, Read)
+
+#Concrete
+-- *************************************************************************************************************
+
+Document -> "<?xml" "version=\"1.0\"" "encoding=\"UTF-8\"" "standalone=\"yes\"?>" Unit {MidPart}* "</unit>"; 
+
+Unit -> "<unit" "xmlns=\"http://www.srcML.org/srcML/src\"" "xmlns:cpp=\"http://www.srcML.org/srcML/cpp\"" Revision Language Filename '>'; 
+
+Revision -> "revision=" String;
+Language -> "language=" String;
+Filename -> "filename=" String;
+
+Element -> STag {MidPart}* ETag 
+         | [LiteralElement] "<literal" LiteralType '>' LiteralText "</literal>"
+         | [LineCommentElement] "<comment" "type=\"line\"" '>' CommentText "</comment>"
+         | [BlockCommentElement] "<comment" "type=\"block\"" '>' CommentText "</comment>"
+         | [BlockElement] "<block>" {MidPart}* "</block>"
+         | [BlockEleWithType] "<block" LiteralType '>' {MidPart}* "</block>"
+         | SingleSTag
+         ;
+
+MidPart -> Element
+         | Text 
+         ;
+
+Text -> [TextStr] String;
+
+--此处暂时不对tag名作限制
+STag -> [STag1] '<' Name '>'
+     |  [STag2] '<' Name ':' Name '>'
+     ;
+
+SingleSTag -> [STagWithAttri] '<' Name Attribute "/>";
+
+ETag -> [ETag1] "</" Name '>'
+     |  [ETag2] "</" Name ':' Name '>'
+     ;
+
+LiteralType -> [LiteralType] "type=" String;
+LiteralText -> [LiteralText] String;
+
+CommentText -> [CommentText] String;
+
+Attribute -> Name '=' String;
+
+#Directives
+
+BlockComment: "<!--"  "-->" ;
+
+#Actions
+-- ******************************************************************************************************************
+
+TFile +> Document
+TFile tUnit tChildM +> "<?xml" "version=\"1.0\"" "encoding=\"UTF-8\"" "standalone=\"yes\"?>" (tUnit +> Unit) {(tChildM ~*> MidPart)}* "</unit>"; 
+
+TUnit +> Unit
+TUnit tRevision tLanguage tFileName +> "<unit" "xmlns=\"http://www.srcML.org/srcML/src\"" "xmlns:cpp=\"http://www.srcML.org/srcML/cpp\"" (tRevision +> Revision) (tLanguage +>Language) (tFileName +> Filename) '>';
+
+TRevision +> Revision
+TRevision revision +> "revision=" (revision +> String);
+
+TLanguage +> Language
+TLanguage language +> "language=" (language +> String);
+
+TFileName +> Filename
+TFileName filename +> "filename=" (filename +> String);
+
+TChild +> Element
+TChild tKind tChildM +> (tKind +> STag) {(tChildM ~*> MidPart)}* (tKind +> ETag);
+
+TLiteralChild tLiteralType tLiteralText +> "<literal" (tLiteralType +> LiteralType) '>' (tLiteralText +> LiteralText) "</literal>";
+Adaptive:
+[f| \_ (TLiteralChild _ _) -> True |]
+[f| \_ (TLiteralChild _ _) -> (LiteralElement " " LiteralTypeNull "" LiteralTextNull "") |];
+
+TCommentChild tCommentText +> "<comment" "type=\"line\"" '>' (tCommentText +> CommentText) "</comment>";
+TCommentChild tCommentText +> "<comment" "type=\"block\"" '>' (tCommentText +> CommentText) "</comment>";
+
+Adaptive:
+[f| \_ (TCommentChild _) -> True |]
+[f| \_ (TCommentChild _) -> (LineCommentElement " " "" "" CommentTextNull "") |];
+Adaptive:
+[f| \_ (TCommentChild _) -> True |]
+[f| \_ (TCommentChild _) -> (BlockCommentElement " " "" "" CommentTextNull "") |];
+
+TBlockChild tChildM +> "<block>" {(tChildM ~*> MidPart)}* "</block>";
+TBlockChild tChildM +> "<block" LiteralType '>' {(tChildM ~*> MidPart)}* "</block>";
+
+Adaptive:
+[f| \_ (TBlockChild _) -> True |]
+[f| \_ (TBlockChild _) -> (BlockElement "" [] "") |];
+Adaptive:
+[f| \_ (TBlockChild _) -> True |]
+[f| \_ (TBlockChild _) -> (BlockEleWithType " " LiteralTypeNull "" [] "") |];
+
+TSingleKindChild tKind +> (tKind +> SingleSTag);
+
+TChildM +> MidPart
+MTChild tChild +> (tChild +> Element);
+MText tText +> (tText +> Text);
+
+TText +> Text 
+TText tText +> (tText +> String);
+Adaptive:
+ [f| \_ (TText _ ) -> True |]
+ [f| \_ (TText _ ) -> (TextStr ("notext", "")) |];
+
+TKind +> STag
+TKind tKindName +> '<' (tKindName +> Name) '>';
+TKind tKindName +> '<' Name ':' (tKindName +> Name)  '>';
+Adaptive:
+ [p| _ |] [p| TKind _ |]
+ [f| \_ (TKind _) -> STag1 "" ("noname", "") "" |] ;
+Adaptive:
+  [p| _ |] [p| TKind _ |]
+  [f| \_ (TKind _) -> STag2 "" ("noname", "") "" ("noname", "") "" |] ;
+
+TKind +> SingleSTag
+TKind tKindName +> '<' (tKindName +> Name) Attribute "/>";
+Adaptive:
+  [p| _ |] [p| TKind _ |]
+  [f| \_ (TKind _) -> STagWithAttri "" ("noname", " ")  AttributeNull "" |] ;
+
+TKind +> ETag
+TKind tKindName +> "</" (tKindName +> Name) '>';
+TKind tKindName +> "</" Name ':' (tKindName +> Name)  '>';
+
+Adaptive:
+  [p| _ |] [p| TKind _ |]
+  [f| \_ (TKind _) -> ETag1 "" ("noname", "") "" |] ;
+
+Adaptive:
+  [p| _ |] [p| TKind _ |]
+  [f| \_ (TKind _) -> ETag2 "" ("noname", "") "" ("noname", "") "" |] ;
+
+TLiteralType +> LiteralType
+TLiteralType tLiteralTypeNa +> "type=" (tLiteralTypeNa +> String);
+Adaptive:
+  [p| _ |] [p| TLiteralType _ |]
+  [f| \_ (TLiteralType _) -> LiteralType "" ("noname", "") |] ;
+
+TLiteralText +> LiteralText
+TLiteralText literalText +> (literalText +> String);
+Adaptive:
+  [p| _ |] [p| TLiteralText _ |]
+  [f| \_ (TLiteralText _) -> LiteralText ("noname", "") |] ;
+
+TCommentText +> CommentText
+TCommentText commentText +> (commentText +> String);
+Adaptive:
+  [p| _ |] [p| TCommentText _ |]
+  [f| \_ (TCommentText _) -> CommentText ("noname", "") |] ;

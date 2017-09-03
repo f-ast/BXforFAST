@@ -1,0 +1,130 @@
+#Abstract
+-- ************************************************************************************************************
+
+data TFile = TFile TUnit [TChildM]
+  deriving (Show, Eq, Read)
+
+data TUnit = TUnit TRevision TLanguage TFileName  
+  deriving (Show, Eq, Read)
+
+data TRevision = TRevision String
+  deriving (Show, Eq, Read)
+
+data TLanguage = TLanguage String
+  deriving (Show, Eq, Read)
+
+data TFileName = TFileName String
+  deriving (Show, Eq, Read)
+
+data TChild = TChild TKind [TChildM] 
+            | TLiteralChild TLiteralType TLiteralText
+            | TCommentChild TCommentText
+            | TBlockChild [TChildM] 
+            | TSingleKindChild TKind
+  deriving (Show, Eq, Read)
+
+data TChildM = MTChild TChild
+             | MText TText
+  deriving (Show, Eq, Read)
+
+data TText = TText String
+  deriving (Show, Eq, Read)
+
+data TKind = TKind TKindName
+  deriving (Show, Eq, Read)
+
+type TKindName = String
+
+data TLiteralType = TLiteralType TLiteralTypeNa
+  deriving (Show, Eq, Read)
+
+type TLiteralTypeNa = String
+
+data TLiteralText = TLiteralText String
+  deriving (Show, Eq, Read)
+
+data TCommentText = TCommentText String
+  deriving (Show, Eq, Read)
+  
+#Concrete
+-- ************************************************************************************************************
+
+PbFile -> {ChildM}* Unit;
+
+Unit -> "unit" '{' FileName Revision Language '}';
+
+FileName -> "filename:" String; 
+Revision -> "revision:" String;
+Language -> "language:" String; -- biyacc支持Int是00的格式
+
+Child -> "child" "{" Kind {ChildM}* '}'  
+         | "child" "{" "kind:" "literal" "text:" LiteralText "literal" '{' LiteralType '}' '}'
+         | "child" "{" "kind:" "comment" "text:" CommentText '}'
+         | "child" "{" "kind:" "block" {ChildM}* '}'
+         | "child" "{" Kind "text:" "\"This is just a placeholder. Please ignore this child.\"" '}'
+         ;
+
+ChildM -> Child
+        | Text 
+        ;
+
+LiteralText -> String;
+LiteralType -> "type:" String;
+
+CommentText -> String;
+
+Kind -> "kind:" Name;
+Text -> "text:" String;
+
+#Directives
+
+BlockComment: "/*" "*/"; --定义textual proto file中的多行注释格式
+
+#Actions
+-- ************************************************************************************************************
+{-haskell Type +> Nonterminal-}
+
+TFile +> PbFile
+TFile tUnit tChildM +> {(tChildM ~*> ChildM)}* (tUnit +> Unit);
+
+TUnit +> Unit
+TUnit tRevision tLanguage tFileName  +> "unit" '{' (tFileName +> FileName) (tRevision +> Revision) (tLanguage +> Language) '}';
+
+TFileName +> FileName
+TFileName fileName +> "filename:" (fileName +> String); 
+
+TRevision +> Revision
+TRevision revision +> "revision:" (revision +> String);
+
+TLanguage +> Language
+TLanguage language +> "language:" (language +> String);
+
+TChild +> Child
+TChild tKind tChildM +> "child" '{' (tKind +> Kind) {(tChildM ~*> ChildM)}* '}';
+
+TLiteralChild tLiteralType tLiteralText +> "child" '{' "kind:" "literal" "text:" (tLiteralText +> LiteralText)  "literal" '{' (tLiteralType +> LiteralType) '}' '}';
+
+TCommentChild tCommentText +> "child" "{" "kind:" "comment" "text:"  (tCommentText +> CommentText) '}';
+
+TBlockChild tChildM +> "child" "{" "kind:" "block" {(tChildM ~*> ChildM)}* '}';
+
+TSingleKindChild tKind +> "child" "{" (tKind +> Kind) "text:" "\"This is just a placeholder. Please ignore this child.\"" '}';
+
+TChildM +> ChildM
+MTChild tChild +> (tChild +> Child);
+MText tText +> (tText +> Text);
+
+TKind +> Kind
+TKind tKindName +> "kind:" (tKindName +> Name);
+
+TText +> Text
+TText tText +> "text:" (tText+> String);
+
+TLiteralType +> LiteralType
+TLiteralType tLiteralTypeNa +> "type:" (tLiteralTypeNa +> String);
+
+TLiteralText +> LiteralText
+TLiteralText string +> (string +> String);
+
+TCommentText +> CommentText
+TCommentText string +> (string +> String);

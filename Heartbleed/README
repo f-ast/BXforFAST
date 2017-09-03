@@ -1,0 +1,35 @@
+*************************************************************************
+Note: 
+
+If you want to try the steps below one more time, please firstly substitute the content of origin.c file for those of src.c file.
+
+Also, don't forget to change those four files path to your own ones. 
+The file name don't need to be modified. For example, if the path is XX/XX/src.xml, you should change it to YY/YY/src.xml.
+ These four files are:
+   ProcessXML.java, ProcessProto.java, ReverseProcessProto.java, ReverseProcessXML.java
+*************************************************************************
+
+
+-- Your operations can be done like this:
+
+1. Run source2PbText.sh. This step is to parse the source code to a pb file.
+
+2. Suppose there is a tool which can patch pb file directly. After it patched, use protocol buffer built-in operation to decode it and make a new modifiedPb.txt. (Note this is not the modifiedPbPreocessed.txt.)
+
+3. Run patchedPbText2Source.sh. This step is to reflect the change on the pb file to the source code. After executing this, the content in the file named as src.c has been changed to a patched one.
+
+4. Compare current src.c(i.e. the patched source code using BX) with patched.c(i.e. patched source code by programmers), except the layout for new inserted codes, all informations are kept. We think that the tool which can insert on the pb file don't take any responsibility to control the layout on the source after it is reflected to the source.
+
+Also, maybe you think that it is very slow to execute all steps above. However, it is caused by the preprocessing operations. You can just test the BX operations to confirm our alleged fast speed using these steps as below:
+  ./ComXMLBiYacc get srcProcessed.xml srcAST
+  or
+     if [ ! -d "/srcPb.txt" ]; then
+        sudo mkdir /srcPb.txt
+     fi
+     echo "" > srcPb.txt
+     ./ComPBBiYacc put srcPb.txt srcAST
+  or 
+  ./ComPBBiYacc get modifiedPb.txt srcAST
+  or
+  ./ComXMLBiYacc put srcProcessed.xml srcAST
+
