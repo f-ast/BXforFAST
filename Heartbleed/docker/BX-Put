@@ -1,0 +1,15 @@
+cp openssl/modifiedPbProcessed.txt .
+
+if [ ! -f ReverseProcessProto.class ]; then
+	javac ReverseProcessProto.java
+fi
+java ReverseProcessProto modifiedPbProcessed.txt modifiedPb.txt
+`uname -s`/ComPBBiYacc get modifiedPb.txt srcAST
+`uname -s`/ComXMLBiYacc put srcProcessed.xml srcAST
+if [ ! -f ReverseProcessXML.class ]; then
+	javac ReverseProcessXML.java
+fi
+java ReverseProcessXML srcProcessed.xml src.xml
+fast src.xml src.c
+
+diff src.c patched.c
