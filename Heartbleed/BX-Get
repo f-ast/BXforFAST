@@ -1,18 +1,1 @@
-rm -f *.txt *.pb *AST
-cp openssl/*.c .
-
-#!/bin/bash
-fast src.c src.xml
-if [ ! -f ProcessXML.class ]; then
-	javac ProcessXML.java
-fi
-java ProcessXML src.xml srcProcessed.xml
-`uname -s`/ComXMLBiYacc get srcProcessed.xml srcAST
-echo "" > srcPb.txt
-`uname -s`/ComPBBiYacc put srcPb.txt srcAST
-if [ ! -f ProcessProto.class ]; then
-	javac ProcessProto.java
-fi
-java ProcessProto srcPb.txt srcPbProcessed.txt
-fast -e srcPbProcessed.txt src.pb
-fast -d src.pb > srcPbProcessed.txt
+docker/BX-Get

@@ -1,4 +1,5 @@
 element {
+  kind: UNIT_KIND
   child {
     kind: COMMENT
     text: "/* ssl/d1_both.c */"

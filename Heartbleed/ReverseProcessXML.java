@@ -14,7 +14,7 @@ import java.io.IOException;
 public class ReverseProcessXML {
     
     public static void main(String[] args) {
-        File file = new File("/Users/lichunmiao/Desktop/ICSE18Paper/Heartbleed/srcProcessed.xml");
+        File file = new File(args[0]);
         
         String inputString = "";
         InputStreamReader reader = null;
@@ -97,7 +97,7 @@ public class ReverseProcessXML {
       
         //下面将outputString写入新的xml文件中
 
-        File file2 = new File("/Users/lichunmiao/Desktop/ICSE18Paper/Heartbleed/src.xml");
+        File file2 = new File(args[1]);
         
         if(!file2.exists())      
         {      

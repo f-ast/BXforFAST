@@ -13,7 +13,7 @@ import java.io.InputStreamReader;
 public class ProcessProto {
 
     public static void main(String[] args) {
-        File file = new File("/Users/lichunmiao/Desktop/ICSE18Paper/Heartbleed/srcPb.txt");
+        File file = new File(args[0]);
         
         String inputString = "";
         InputStreamReader reader = null;
@@ -36,14 +36,11 @@ public class ProcessProto {
         
         String outputString = "";
         
-        outputString += "element {";
+        outputString += "element {\n  kind: UNIT_KIND\n ";
         
         int i = 0;
         
         int tempIndex = 0;
-        
-        if(inputString.charAt(0) == '\n')
-            inputString = inputString.substring(1, inputString.length());
         
         while(i < inputString.length())
         {
@@ -82,34 +79,73 @@ public class ProcessProto {
             }
             else if(inputString.charAt(i) == '}')
             {
-                //把 } 后面的text变为tail,并加进上层的child中
-                if(i+5 < inputString.length() && inputString.substring(i+2, i+6).equals("text"))
-                {
-                    
-                    tempIndex = i+9;
-                    
-                    while(tempIndex < inputString.length())
-                    {
-                        if(inputString.charAt(tempIndex) == '"')
-                        {
-                            if(inputString.charAt(tempIndex - 1) != '\\')
-                                break;
-                            else
-                                tempIndex ++;
-                        }
-                        else
-                            tempIndex ++;
-                    }
-                            
-                    String temp = decoEsca(inputString.substring(i+9, tempIndex));  
-
-                    outputString += "tail: \"" + temp + "\" }";
-                    
-                    i = tempIndex + 1;
-                    
-                    continue;
-                }
-    
+            	int index = i+1;
+            	boolean tag = true;
+            	
+            	for(; index<inputString.length();index++)
+            	{
+            		if(inputString.charAt(index) == '\n' || inputString.charAt(index) == ' ')
+            			continue;
+            		else
+            			if(index+3 < inputString.length() && inputString.substring(index, index+4).equals("text"))
+            					//需要把 } 后面的text变为tail,并加进上层的child中
+            		    {
+            				 tempIndex = index + 7;
+                             
+                             while(tempIndex < inputString.length())
+                             {
+                                 if(inputString.charAt(tempIndex) == '"')
+                                 {
+                                     if(inputString.charAt(tempIndex - 1) != '\\')
+                                         break;
+                                     else
+                                         tempIndex ++;
+                                 }
+                                 else
+                                     tempIndex ++;
+                             }
+                             
+                             String temp = decoEsca(inputString.substring(index+7, tempIndex+1));  
+                             
+                            // outputString += "tail: \"" + temp + "\n";
+                             outputString += "tail: \"" + temp + "\n";
+                             
+                             //int tempIndex2 = inputString.indexOf("\n", i);
+                             int tempIndex2=i;
+                             
+                             for(; tempIndex2<inputString.length(); tempIndex2++)
+                             {
+                            	 if(inputString.charAt(tempIndex2) == '\n' || inputString.charAt(tempIndex2) == 't')
+                            	 {
+                            		 for(int k=1;k<index-tempIndex2;k++)
+                                      	outputString += " ";
+                            		 break;
+                            	 }
+                            	 else continue;
+                             }
+                             
+                             outputString += "}";
+                             i = tempIndex + 1;
+                             tag = false;
+                             break;
+            			}
+            			else 
+            			{ 
+            				outputString += inputString.substring(i, index);
+                        
+            				i = index;
+            				tag = false;
+            				break;	
+            			}
+            				
+            	}
+            	
+            	if(tag == true)
+            	{
+            		outputString += "}";
+            		i = index;
+            	}
+            	continue;
             }
             /*下面处理一些小minors,比如literal type的string变成string_type, language的值由"java"变成JAVA*/   
             else if(i+6 < inputString.length() && inputString.substring(i, i+7).equals("literal"))
@@ -156,11 +192,11 @@ public class ProcessProto {
         }
        
         
-        outputString +=  "\n}";
+        outputString +=  "\n}\n";
        
         //下面将outputString写入新的文件中
 
-        File file2 = new File("/Users/lichunmiao/Desktop/ICSE18Paper/Heartbleed/srcPbProcessed.txt");
+        File file2 = new File(args[1]);
         
         try {  
             FileWriter fileWriter = new FileWriter(file2);  
@@ -181,7 +217,9 @@ public class ProcessProto {
             if(inputString.charAt(i) == '\n')
                 outputString += "$\\n$";
             else if(inputString.charAt(i) == '\t')
-                outputString += "$\\t$";
+                outputString += "$\\t$"; 
+            else if(inputString.charAt(i) == '\'')
+            	outputString += "\\\'"; 
             else 
                 outputString += inputString.charAt(i);
         }

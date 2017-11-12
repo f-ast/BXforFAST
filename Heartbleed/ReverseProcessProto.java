@@ -12,7 +12,7 @@ import java.io.InputStreamReader;
 
 public class ReverseProcessProto {
     public static void main(String[] args) {
-        File file = new File("/Users/lichunmiao/Desktop/ICSE18Paper/Heartbleed/modifiedPbProcessed.txt");
+        File file = new File(args[0]);
         
         String inputString = "";
         
@@ -37,10 +37,8 @@ public class ReverseProcessProto {
         
         //把pb decode形式转换
         String outputString = "";
- 
-        inputString = inputString.replace("element {", "");
-       
-        int i = 0;
+        		
+        int i = inputString.indexOf("child") - 1;
         int tempIndex = 0;
         
         while( i < inputString.length())
@@ -61,9 +59,17 @@ public class ReverseProcessProto {
                 
                 tempIndex = inputString.indexOf('}', j+1);
                 
-                String temp = encoEsca(inputString.substring(i+7, tempIndex));
+                String temp = encoEsca(inputString.substring(i+7, j+1));
                 
-                outputString += ("}" + " text: \""+ temp);
+                //outputString += ("}" + " text: \""+ temp);
+                outputString += "}";
+                
+                for(int insertSpace=0;insertSpace<j-i;insertSpace++)
+                	outputString += " ";
+                
+                outputString += encoEsca(inputString.substring(j+1, tempIndex));
+                
+                outputString += "text: \"" + temp;
                 
                 i = tempIndex + 1;
                 continue;
@@ -102,7 +108,7 @@ public class ReverseProcessProto {
             {
                 tempIndex = inputString.indexOf(" ", i+6);
                 
-                outputString += "kind: " + inputString.substring(i+5, tempIndex).toLowerCase(); //把kind值变为全小写
+                outputString += "kind:" + inputString.substring(i+5, tempIndex).toLowerCase(); //把kind值变为全小写
                 
                 i = tempIndex;
                 continue;
@@ -154,7 +160,7 @@ public class ReverseProcessProto {
      
         //下面将outputString写入新的xml文件中
 
-        File file2 = new File("/Users/lichunmiao/Desktop/ICSE18Paper/Heartbleed/modifiedPb.txt");
+        File file2 = new File(args[1]);
         
         try {  
             FileWriter fileWriter = new FileWriter(file2);  
