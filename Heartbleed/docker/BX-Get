@@ -1,18 +1,28 @@
-rm -f *.txt *.pb *AST
+#!/bin/sh
 cp openssl/*.c .
-
-#!/bin/bash
+echo fast src.c src.xml
 fast src.c src.xml
 if [ ! -f ProcessXML.class ]; then
 	javac ProcessXML.java
 fi
-java ProcessXML src.xml srcProcessed.xml
+if [ ! -f srcProcessed.xml ]; then
+	java ProcessXML src.xml srcProcessed.xml
+fi
+echo `uname -s`/ComXMLBiYacc get srcProcessed.xml srcAST
 `uname -s`/ComXMLBiYacc get srcProcessed.xml srcAST
 echo "" > srcPb.txt
 `uname -s`/ComPBBiYacc put srcPb.txt srcAST
 if [ ! -f ProcessProto.class ]; then
 	javac ProcessProto.java
 fi
-java ProcessProto srcPb.txt srcPbProcessed.txt
+if [ ! -f srcPbProcessed.txt ]; then
+	java ProcessProto srcPb.txt srcPbProcessed.txt
+fi
+echo fast -e srcPbProcessed.txt src.pb
 fast -e srcPbProcessed.txt src.pb
+echo fast -d src.pb > srcPbProcessed.txt
 fast -d src.pb > srcPbProcessed.txt
+echo fast src.c src1.pb
+fast src.c src1.pb
+echo Size reduction: ls -l *.pb
+ls -l *.pb
